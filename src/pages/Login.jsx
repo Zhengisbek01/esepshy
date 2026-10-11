@@ -37,7 +37,6 @@ function StaffLogin() {
   const [err, setErr] = useState('');
   const [twofa, setTwofa] = useState(null);
   const [code, setCode] = useState('');
-  const [demo, setDemo] = useState(false);
   const [, tick] = useState(0);
   useEffect(() => { const t = setInterval(() => tick((x) => x + 1), 1000); return () => clearInterval(t); }, []);
 
@@ -101,20 +100,17 @@ function StaffLogin() {
         <div className="btns"><Btn kind="pri" type="submit">Войти</Btn></div>
         <span className="small muted">Забыли пароль? Новый временный пароль выдаёт администратор платформы.</span>
       </form>
-      <div>
-        <Btn kind="ghost" small onClick={() => setDemo(!demo)} aria-expanded={demo}>{demo ? 'Скрыть демо-доступы' : 'Показать демо-доступы для проверки'}</Btn>
-        {demo && (
-          <div className="card" style={{ marginTop: 8 }}>
-            <p className="small" style={{ margin: '0 0 10px' }}>Пароль для всех демо-учётных записей: <b className="mono">{DEMO_PASSWORD}</b>. Нажмите строку, чтобы подставить логин и пароль. У администратора после пароля нужен код из SMS.</p>
-            <div className="tbl"><table><thead><tr><th>Логин</th><th>Роль</th><th>Сотрудник</th></tr></thead><tbody>
-              {state.users.filter((u) => u.active).map((u) => (
-                <tr key={u.id} className="click" onClick={() => { setLg(u.login); setPw(DEMO_PASSWORD); setErr(''); }}>
-                  <td className="mono">{u.login}</td><td>{ROLES[u.role].name}</td><td>{u.name}<span className="sub">{state.orgs.find((o) => o.id === u.org)?.name}</span></td>
-                </tr>
-              ))}
-            </tbody></table></div>
-          </div>
-        )}
+      <div className="card" style={{ maxWidth: 640, borderColor: 'var(--amber)' }}>
+        <div className="card-h"><h3>Пилотные учётные записи</h3><span className="card-aside">нажмите, чтобы подставить</span></div>
+        <p className="small" style={{ margin: '0 0 12px' }}>Пароль для всех: <b className="mono" style={{ fontSize: '1rem', background: 'var(--warn-soft)', padding: '2px 8px', borderRadius: 6 }}>{DEMO_PASSWORD}</b></p>
+        <div className="role-grid">
+          {state.users.filter((u) => u.active).map((u) => (
+            <button key={u.id} type="button" className="role-btn" onClick={() => { setLg(u.login); setPw(DEMO_PASSWORD); setErr(''); }}>
+              <b className="mono">{u.login}</b><span>{ROLES[u.role].name} · {u.name}</span>
+            </button>
+          ))}
+        </div>
+        <p className="small muted" style={{ margin: '12px 0 0' }}>У администратора после пароля нужен код из SMS: в тестовом режиме он показан на экране. Жители входят на вкладке «Житель» по тестовому ИИН.</p>
       </div>
     </div>
   );
