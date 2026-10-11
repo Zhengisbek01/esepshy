@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../store.jsx';
 import { ROLES, RES } from '../data/constants.js';
 import { dt, uid } from '../lib/format.js';
+import { hashPass, tempPassword } from '../lib/auth.js';
 import { Page, Card, Btn, Pill, Table, Modal, Field, Note, Seg } from '../ui.jsx';
 
 const ZONE = (o, s) => o.type === 'supplier' ? `Ресурс: ${RES[o.res].name}` : o.type === 'osi' ? `Дома: ${o.blds.map((b) => s.buildings[b].short.replace('Дом ', '№')).join(', ')}` : o.type === 'erc' ? 'Все дома пилота' : o.type === 'gov' ? 'Обезличенные данные' : 'Платформа';
@@ -11,7 +12,16 @@ export function Users() {
   const { state, user, act, toast } = useStore();
   const [tab, setTab] = useState('users');
   const [add, setAdd] = useState(false);
-  const [form, setForm] = useState({ name: '', role: 'operator', org: 'erc' });
+  const [form, setForm] = useState({ name: '', login: '', role: 'operator', org: 'erc' });
+  const [issued, setIssued] = useState(null);
+  const issue = (u, temp, created) => setIssued({ name: u.name, login: u.login, temp, created });
+  const resetPass = (u) => {
+    const temp = tempPassword();
+    act('Сброс пароля', u.name, 'Выдан временный пароль, смена при следующем входе', (d) => { const x = d.users.find((y) => y.id === u.id); x.passHash = hashPass(x.login, temp); x.mustChange = true; x.failed = 0; x.lockedUntil = 0; });
+    issue(u, temp);
+  };
+  const unlock = (u) => { act('Снята блокировка входа', u.name, '', (d) => { const x = d.users.find((y) => y.id === u.id); x.failed = 0; x.lockedUntil = 0; }); toast('Блокировка входа снята'); };
+  const toggle2fa = (u) => { act(u.twoFactor ? 'Отключён второй фактор' : 'Включён второй фактор', u.name, 'Код по SMS при входе', (d) => { const x = d.users.find((y) => y.id === u.id); x.twoFactor = !x.twoFactor; }); };
   const [err, setErr] = useState('');
   const orgsFor = (role) => state.orgs.filter((o) => ROLE_ORG[role].includes(o.type));
   const toggle = (u) => {
@@ -26,19 +36,28 @@ export function Users() {
   };
   const create = () => {
     if (form.name.trim().split(/\s+/).length < 2) { setErr('Укажите имя и фамилию.'); return; }
-    act('Новый пользователь', form.name, `${ROLES[form.role].name}, ${state.orgs.find((o) => o.id === form.org).name}`, (d) => { d.users.push({ id: uid('u'), name: form.name.trim(), role: form.role, org: form.org, active: true, invitedAt: new Date().toISOString() }); });
-    setAdd(false); setForm({ name: '', role: 'operator', org: 'erc' }); toast('Пользователь создан и появится на экране входа');
+    const login = form.login.trim().toLowerCase();
+    if (!/^[a-z0-9._-]{3,32}$/.test(login)) { setErr('Логин: 3–32 символа, латиница, цифры, точка, дефис.'); return; }
+    if (state.users.some((u) => u.login.toLowerCase() === login)) { setErr('Такой логин уже занят.'); return; }
+    const temp = tempPassword();
+    act('Новый пользователь', form.name, `${login}: ${ROLES[form.role].name}, ${state.orgs.find((o) => o.id === form.org).name}`, (d) => { d.users.push({ id: uid('u'), login, name: form.name.trim(), role: form.role, org: form.org, active: true, passHash: hashPass(login, temp), mustChange: true, failed: 0, lockedUntil: 0, twoFactor: form.role === 'admin', invitedAt: new Date().toISOString() }); });
+    setAdd(false); setForm({ name: '', login: '', role: 'operator', org: 'erc' }); issue({ name: form.name.trim(), login }, temp, true);
   };
   return (
     <Page title="Организации и пользователи" lead="Каждый сотрудник видит только данные своей организации и зоны. Изменения ролей и доступа пишутся в журнал." actions={<Btn kind="pri" onClick={() => { setAdd(true); setErr(''); }}>Добавить пользователя</Btn>}>
       <Seg value={tab} onChange={setTab} items={[['users', 'Пользователи'], ['orgs', 'Организации']]} />
       {tab === 'users' ? (
         <Table keyOf={(u) => u.id} rowClass={(u) => (u.active ? '' : 'done')} cols={[
-          { h: 'Сотрудник', r: (u) => <>{u.name}{u.id === user.id && <span className="sub">это вы</span>}</> },
+          { h: 'Сотрудник', r: (u) => <>{u.name}<span className="sub mono">{u.login}{u.id === user.id ? ' · это вы' : ''}</span></> },
           { h: 'Организация', r: (u) => state.orgs.find((o) => o.id === u.org)?.name },
           { h: 'Роль', r: (u) => <select aria-label={`Роль ${u.name}`} value={u.role} onChange={(e) => changeRole(u, e.target.value)} style={{ width: 'auto' }}>{Object.entries(ROLES).filter(([k]) => k !== 'resident').map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}</select> },
-          { h: 'Статус', r: (u) => (u.active ? <Pill kind="ok">активен</Pill> : <Pill kind="bad">заблокирован</Pill>) },
-          { h: '', r: (u) => <Btn small kind={u.active ? 'danger' : ''} onClick={() => toggle(u)}>{u.active ? 'Отозвать доступ' : 'Восстановить'}</Btn> },
+          { h: 'Статус', r: (u) => <>{!u.active ? <Pill kind="bad">заблокирован</Pill> : u.lockedUntil > Date.now() ? <Pill kind="warn">вход заблокирован</Pill> : u.mustChange ? <Pill kind="info">ждёт смены пароля</Pill> : <Pill kind="ok">активен</Pill>}<span className="sub">{u.lastLogin ? `вход ${dt(u.lastLogin)}` : 'ещё не входил'}</span></> },
+          { h: '2FA', r: (u) => <label className="btns small"><input type="checkbox" checked={!!u.twoFactor} onChange={() => toggle2fa(u)} /> SMS</label> },
+          { h: '', r: (u) => <div className="btns">
+            <Btn small onClick={() => resetPass(u)}>Сбросить пароль</Btn>
+            {u.lockedUntil > Date.now() && <Btn small onClick={() => unlock(u)}>Разблокировать</Btn>}
+            <Btn small kind={u.active ? 'danger' : ''} onClick={() => toggle(u)}>{u.active ? 'Отозвать доступ' : 'Восстановить'}</Btn>
+          </div> },
         ]} rows={state.users} />
       ) : (
         <Table keyOf={(o) => o.id} cols={[
@@ -47,10 +66,19 @@ export function Users() {
         ]} rows={state.orgs} />
       )}
       <Note>Жители входят через eGov и в этом списке не отображаются: их доступ определяется связкой ИИН — лицевой счёт.</Note>
+      {issued && (
+        <Modal title={issued.created ? 'Пользователь создан' : 'Временный пароль выдан'} onClose={() => setIssued(null)}>
+          <p className="small" style={{ margin: 0 }}>{issued.name}</p>
+          <div className="card"><div className="row" style={{ gridTemplateColumns: '1fr 1fr' }}><div><span className="small muted">Логин</span><div className="mono">{issued.login}</div></div><div><span className="small muted">Временный пароль</span><div className="mono" style={{ fontWeight: 600 }}>{issued.temp}</div></div></div></div>
+          <Note>Пароль показан один раз. Передайте его сотруднику лично; при первом входе система попросит задать постоянный пароль.</Note>
+          <div className="btns"><Btn kind="pri" onClick={() => { navigator.clipboard?.writeText(`${issued.login} / ${issued.temp}`).then(() => toast('Скопировано'), () => {}); }}>Скопировать</Btn></div>
+        </Modal>
+      )}
       {add && (
         <Modal title="Новый пользователь" onClose={() => setAdd(false)}>
           <div className="form">
-            <Field label="Имя и фамилия" error={err}><input value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); setErr(''); }} placeholder="Айжан Мукашева" /></Field>
+            <Field label="Имя и фамилия"><input value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); setErr(''); }} placeholder="Айжан Мукашева" /></Field>
+            <Field label="Логин" error={err} hint="Временный пароль выдаётся после создания"><input value={form.login} onChange={(e) => { setForm({ ...form, login: e.target.value }); setErr(''); }} placeholder="a.mukasheva" /></Field>
             <Field label="Роль"><select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value, org: orgsFor(e.target.value)[0].id })}>{Object.entries(ROLES).filter(([k]) => k !== 'resident').map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}</select></Field>
             <Field label="Организация"><select value={form.org} onChange={(e) => setForm({ ...form, org: e.target.value })}>{orgsFor(form.role).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}</select></Field>
             <div className="btns"><Btn kind="pri" onClick={create}>Создать</Btn></div>

@@ -1,5 +1,6 @@
 import { RES, RK, CUR, ORGS, USERS, OSI_RATE } from './constants.js';
 import { normQty, lineCalc } from '../lib/engine.js';
+import { hashPass, DEMO_PASSWORD } from '../lib/auth.js';
 
 function mulberry32(a) {
   return function () {
@@ -158,7 +159,7 @@ export function generate(seed = 20261011) {
   });
 
   return {
-    version: 3,
+    version: 4,
     seed,
     period: { cur: CUR, status: 'checking', releasedAt: null },
     buildings, accounts, charges, unallocated, tariffs,
@@ -190,7 +191,7 @@ export function generate(seed = 20261011) {
       { id: 'sms', name: 'Шлюз WhatsApp/SMS', mode: 'API', status: 'ok', last: now, errors: 0 },
     ],
     orgs: ORGS.map((o) => ({ ...o })),
-    users: USERS.map((u) => ({ ...u, active: true })),
+    users: USERS.map((u) => ({ ...u, active: true, passHash: hashPass(u.login, DEMO_PASSWORD), mustChange: false, failed: 0, lockedUntil: 0, twoFactor: u.role === 'admin' })),
     messages: [],
     audit: [
       { id: 'a-0', at: '2026-10-05T10:00:00.000Z', user: 'система', role: 'system', action: 'Загрузка начислений', object: 'Период 2026-09', details: 'Начисления 4 поставщиков приняты' },

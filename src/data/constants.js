@@ -42,22 +42,22 @@ export const ORGS = [
 ];
 
 export const USERS = [
-  { id: 'u-op1', name: 'Айгерим Сапарова', role: 'operator', org: 'erc' },
-  { id: 'u-op2', name: 'Данияр Ахметов', role: 'operator', org: 'erc' },
-  { id: 'u-debt', name: 'Мадина Ергалиева', role: 'debt', org: 'erc' },
-  { id: 'u-head', name: 'Ерлан Касымов', role: 'head', org: 'erc' },
-  { id: 'u-admin', name: 'Тимур Ли', role: 'admin', org: 'platform' },
-  { id: 'u-el', name: 'Бауыржан Омаров', role: 'supplier', org: 'el' },
-  { id: 'u-heat', name: 'Нурлан Жумабаев', role: 'supplier', org: 'heat' },
-  { id: 'u-water', name: 'Сауле Абенова', role: 'supplier', org: 'water' },
-  { id: 'u-gas', name: 'Руслан Тлеубаев', role: 'supplier', org: 'gas' },
-  { id: 'u-osi1', name: 'Гульнара Искакова', role: 'osi', org: 'osi1' },
-  { id: 'u-osi2', name: 'Марат Сеитов', role: 'osi', org: 'osi2' },
-  { id: 'u-insp-w', name: 'Ержан Беков', role: 'inspector', org: 'water' },
-  { id: 'u-insp-e', name: 'Алибек Нуров', role: 'inspector', org: 'el' },
-  { id: 'u-insp-c', name: 'Самат Кенжебаев', role: 'inspector', org: 'erc' },
-  { id: 'u-akim', name: 'Асель Нурланова', role: 'akimat', org: 'akimat' },
-  { id: 'u-audit', name: 'Ольга Ким', role: 'auditor', org: 'audit' },
+  { id: 'u-op1', login: 'operator1', name: 'Айгерим Сапарова', role: 'operator', org: 'erc' },
+  { id: 'u-op2', login: 'operator2', name: 'Данияр Ахметов', role: 'operator', org: 'erc' },
+  { id: 'u-debt', login: 'debt', name: 'Мадина Ергалиева', role: 'debt', org: 'erc' },
+  { id: 'u-head', login: 'head', name: 'Ерлан Касымов', role: 'head', org: 'erc' },
+  { id: 'u-admin', login: 'admin', name: 'Тимур Ли', role: 'admin', org: 'platform' },
+  { id: 'u-el', login: 'energo', name: 'Бауыржан Омаров', role: 'supplier', org: 'el' },
+  { id: 'u-heat', login: 'teplo', name: 'Нурлан Жумабаев', role: 'supplier', org: 'heat' },
+  { id: 'u-water', login: 'vodokanal', name: 'Сауле Абенова', role: 'supplier', org: 'water' },
+  { id: 'u-gas', login: 'gaz', name: 'Руслан Тлеубаев', role: 'supplier', org: 'gas' },
+  { id: 'u-osi1', login: 'osi1', name: 'Гульнара Искакова', role: 'osi', org: 'osi1' },
+  { id: 'u-osi2', login: 'osi2', name: 'Марат Сеитов', role: 'osi', org: 'osi2' },
+  { id: 'u-insp-w', login: 'insp.vodokanal', name: 'Ержан Беков', role: 'inspector', org: 'water' },
+  { id: 'u-insp-e', login: 'insp.energo', name: 'Алибек Нуров', role: 'inspector', org: 'el' },
+  { id: 'u-insp-c', login: 'insp.erc', name: 'Самат Кенжебаев', role: 'inspector', org: 'erc' },
+  { id: 'u-akim', login: 'akimat', name: 'Асель Нурланова', role: 'akimat', org: 'akimat' },
+  { id: 'u-audit', login: 'audit', name: 'Ольга Ким', role: 'auditor', org: 'audit' },
 ];
 
 export const ISSUE_TYPES = {

@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useStore } from './store.jsx';
 import { ROLES } from './data/constants.js';
 import { openIssues, openAnomalies } from './lib/engine.js';
-import Login, { Gauge } from './pages/Login.jsx';
+import Login, { Gauge, ChangePassword } from './pages/Login.jsx';
+import { Modal } from './ui.jsx';
+import { IDLE_MS } from './lib/auth.js';
 import * as Res from './pages/Resident.jsx';
 import * as Sup from './pages/Supplier.jsx';
 import * as Osi from './pages/Osi.jsx';
@@ -52,10 +54,19 @@ function useHashPage(def) {
 }
 
 export default function App() {
-  const { user, state, logout, reset, roleName } = useStore();
+  const { user, state, session, logout, touch, reset, roleName } = useStore();
   const items = user ? NAV[user.role] : [];
   const [page, go] = useHashPage(items[0]?.[0] || '');
+  const [pwd, setPwd] = useState(false);
+  useEffect(() => {
+    if (!session) return undefined;
+    const ev = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+    ev.forEach((e) => window.addEventListener(e, touch, { passive: true }));
+    const t = setInterval(() => { if (Date.now() - session.last > IDLE_MS) logout('Сессия завершена после 30 минут бездействия'); }, 15000);
+    return () => { ev.forEach((e) => window.removeEventListener(e, touch)); clearInterval(t); };
+  });
   if (!user) return <Login />;
+  if (user.mustChange) return <ChangePassword forced />;
   const cur = items.find((i) => i[0] === page) || items[0];
   const Comp = cur[3];
   const org = state.orgs.find((o) => o.id === user.org);
@@ -76,11 +87,13 @@ export default function App() {
         </nav>
         <div className="side-foot">
           <div className="testbar">Тестовая версия · демо-данные</div>
-          <button type="button" onClick={() => { logout(); location.hash = ''; }}>Сменить пользователя</button>
+          {user.role !== 'resident' && <button type="button" onClick={() => setPwd(true)}>Сменить пароль</button>}
+          <button type="button" onClick={() => { logout(); location.hash = ''; }}>Выйти</button>
           <button type="button" onClick={() => { if (window.confirm('Сбросить все изменения и вернуть демо-данные к исходным?')) reset(); }}>Сбросить демо</button>
         </div>
       </aside>
       <main><Comp go={go} key={`${user.id}-${cur[0]}`} /></main>
+      {pwd && <Modal title="Смена пароля" onClose={() => setPwd(false)}><ChangePassword onDone={() => setPwd(false)} /></Modal>}
     </div>
   );
 }
